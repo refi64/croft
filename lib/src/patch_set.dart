@@ -20,9 +20,14 @@ class PatchSet {
   static const _maxPatchNameLength = 64;
   static const _patchSuffix = '.patch';
 
+  static const _mergedSourcesJson = 'all.json';
+  static const _componentSourcesJson = '_sources.json';
+
   final Directory sourcesRoot;
   final String patchesSubdir;
   final Component component;
+
+  final Directory patchesRoot;
 
   final _indentedEncoder = JsonEncoder.withIndent(' ' * _indentation);
 
@@ -30,19 +35,8 @@ class PatchSet {
       {required String sourcesRoot,
       required this.patchesSubdir,
       required this.component})
-      : sourcesRoot = Directory(sourcesRoot);
-
-  factory PatchSet.forSourcesRoot(
-          {required String sourcesRoot,
-          required String patchesSubdir,
-          required Component component}) =>
-      PatchSet(
-          sourcesRoot: sourcesRoot,
-          patchesSubdir: p.join(patchesSubdir, component.typeDescription),
-          component: component);
-
-  Directory get patchesDir =>
-      Directory(p.join(sourcesRoot.path, patchesSubdir));
+      : sourcesRoot = Directory(sourcesRoot),
+        patchesRoot = Directory(p.join(sourcesRoot, patchesSubdir));
 
   String _getPatchFilename(String subject) {
     if (subject.length + _patchSuffix.length > _maxPatchNameLength) {
@@ -52,30 +46,58 @@ class PatchSet {
     return '$subject.patch';
   }
 
-  File get _sourcesFile => File(p.join(patchesDir.path, '_sources.json'));
+  Directory _getComponentPatchesDir(ComponentType type) =>
+      Directory(p.join(patchesRoot.path, type.description));
 
-  Future<void> _writeRelativePatchFilesToSources(List<String> patches) async {
+  File _getComponentSourcesFile(ComponentType type) =>
+      File(p.join(_getComponentPatchesDir(type).path, _componentSourcesJson));
+
+  Future<void> _writeRelativePatchFilesToSources(
+      File sourcesFile, List<String> patches) async {
     var source = {'type': 'patch', 'paths': patches};
-    await _sourcesFile.writeAsString(_indentedEncoder.convert([source]));
+    await sourcesFile.writeAsString(_indentedEncoder.convert([source]));
   }
 
-  Future<List<String>> _readPatchNamesFromSources() async {
-    if (!await _sourcesFile.exists()) {
-      log.fatal('$_sourcesFile does not exist');
+  Future<List<String>> _readPatchNamesFromSources(File sourcesFile) async {
+    if (!await sourcesFile.exists()) {
+      log.fatal('$sourcesFile does not exist');
     }
 
-    var source = json.decode(await _sourcesFile.readAsString()) as List;
+    var source = json.decode(await sourcesFile.readAsString()) as List;
     return (source[0]['paths'] as List).cast<String>();
   }
 
-  Future<void> _clearOutputDirectory() async {
+  // As a workaround for https://github.com/flatpak/flatpak-builder/issues/282
+  // we can merge all the individual source manifests together into a single
+  // one. In theory, we could have done this from the start instead of using
+  // individual files, but the time for that decision has mostly passed.
+  Future<void> _mergeSourceManifests() async {
+    var allPatchNames = <String>[];
+
+    for (var type in ComponentType.values) {
+      var sourcesFile = _getComponentSourcesFile(type);
+      var patchNames = await _readPatchNamesFromSources(sourcesFile);
+      allPatchNames.addAll(patchNames);
+    }
+
+    var mergedSourcesFile = File(p.join(patchesRoot.path, _mergedSourcesJson));
+    await _writeRelativePatchFilesToSources(mergedSourcesFile, allPatchNames);
+  }
+
+  Future<void> _clearOutputDirectory(Directory patchesDir) async {
     if (await patchesDir.exists()) {
       await patchesDir.delete(recursive: true);
     }
   }
 
   Future<void> exportAllPatches() async {
-    await _clearOutputDirectory();
+    var patchesDir = _getComponentPatchesDir(component.type);
+    var sourcesFile = _getComponentSourcesFile(component.type);
+
+    var relativePatchesDir =
+        p.relative(patchesDir.path, from: sourcesRoot.path);
+
+    await _clearOutputDirectory(patchesDir);
     await patchesDir.create(recursive: true);
 
     log.info('Finding parent revision...');
@@ -103,8 +125,9 @@ class PatchSet {
 
       // Due to flatpak-builder intricacies, the patch file names in the sources
       // file must be relative to the sources root, not the location of the
-      // sources JSON.
-      var patchRelativeToSourcesRoot = p.join(patchesSubdir, patchFilename);
+      // sources manifest.
+      var patchRelativeToSourcesRoot =
+          p.join(relativePatchesDir, patchFilename);
       relativePatches.add(patchRelativeToSourcesRoot);
 
       var patchFile =
@@ -115,11 +138,13 @@ class PatchSet {
     }
 
     log.info('Saving patch list...');
-    await _writeRelativePatchFilesToSources(relativePatches);
+    await _writeRelativePatchFilesToSources(sourcesFile, relativePatches);
+    await _mergeSourceManifests();
   }
 
   Future<void> applyAllPatches({bool skipFFmpegConfig = false}) async {
-    var patchNames = await _readPatchNamesFromSources();
+    var sourcesFile = _getComponentSourcesFile(component.type);
+    var patchNames = await _readPatchNamesFromSources(sourcesFile);
     if (skipFFmpegConfig) {
       // This should have been checked by the caller.
       assert(component.type == ComponentType.ffmpeg);

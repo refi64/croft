@@ -99,7 +99,7 @@ class Container {
     }
   }
 
-  PatchSet createPatchSet(Component component) => PatchSet.forSourcesRoot(
+  PatchSet createPatchSet(Component component) => PatchSet(
       sourcesRoot: project.manifestDir,
       patchesSubdir: Config.patchesSubdir,
       component: component);
