@@ -86,7 +86,7 @@ class GitRepo {
   Future<void> applyPatches(List<String> patches,
       {int additionalStripComponents = 0}) async {
     var stripComponents = defaultStripComponents + additionalStripComponents;
-    var result = await _git.run(['am', '-p$stripComponents']..addAll(patches));
+    var result = await _git.run(['am', '-3', '-p$stripComponents']..addAll(patches));
     if (result.exitCode != 0) {
       log.fatal(
           "'git am' returned an error, probably because of patch conflicts.");
