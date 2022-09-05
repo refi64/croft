@@ -105,16 +105,18 @@ class FFmpegComponent extends Component {
   Future<String?> getLastConfigCommit() async => await _getConfigCommit(
       from: GitRepo.previousRevision, to: GitRepo.headRevision);
 
-  Future<void> generateConfiguration() async {
-    if (!await repo.isClean() || await repo.hasUntrackedFiles()) {
-      log.fatal('FFmpeg repo is dirty or has untracked files, try'
-          " 'croft destructive-reset ffmpeg' first");
-    }
+  Future<void> generateConfiguration({required bool commit}) async {
+    if (commit) {
+      if (!await repo.isClean() || await repo.hasUntrackedFiles()) {
+        log.fatal('FFmpeg repo is dirty or has untracked files, try'
+            " 'croft destructive-reset ffmpeg' first");
+      }
 
-    var existingConfigCommit = await getLastConfigCommit();
-    if (existingConfigCommit != null) {
-      log.fatal('An FFmpeg configuration commit is already present'
-          " (use 'croft descructive-reset ffmpeg pre-config' to undo it)");
+      var existingConfigCommit = await getLastConfigCommit();
+      if (existingConfigCommit != null) {
+        log.fatal('An FFmpeg configuration commit is already present'
+            " (use 'croft descructive-reset ffmpeg pre-config' to undo it)");
+      }
     }
 
     log.info('Building docker image...');
@@ -144,10 +146,12 @@ class FFmpegComponent extends Component {
     log.info('Generating GN files...');
     await _runImageCommand([_generateGNScript]);
 
-    log.info('Committing changes...');
-    await repo.add(['.']);
-    await repo.commit(
-        message: _configCommitMessage, author: _configCommitAuthor);
+    if (commit) {
+      log.info('Committing changes...');
+      await repo.add(['.']);
+      await repo.commit(
+          message: _configCommitMessage, author: _configCommitAuthor);
+    }
   }
 
   Future<String?> _getConfigCommit(

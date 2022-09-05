@@ -87,13 +87,17 @@ class GenerateFFmpegConfigCommand extends CommandHandler<String> {
       '''
       .flowLines();
 
+  late Arg<bool> noCommit;
+
   @override
-  void register(ArgParser parser) {}
+  void register(ArgParser parser) {
+    noCommit = parser.addFlag('no-commit', description: "Don't commit the FFmpeg config");
+  }
 
   @override
   Future<void> run(HandlerContext context) async {
     var ffmpeg = context.container.ffmpeg;
-    await ffmpeg.generateConfiguration();
+    await ffmpeg.generateConfiguration(commit: !noCommit.value);
   }
 }
 
