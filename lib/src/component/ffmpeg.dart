@@ -85,7 +85,7 @@ class FFmpegComponent extends Component {
 
     var waitingForCommit = false;
     for (var line in deps) {
-      if (line.contains(_depName)) {
+      if (line.contains('ffmpeg_revision')) {
         waitingForCommit = true;
       }
 
