@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:croft/src/log.dart';
 import 'package:croft/src/tool_runner.dart';
 
+import 'dart:io';
+
 extension _SplitLines on String {
   List<String> splitLines() =>
       split('\n').where((line) => line.isNotEmpty).toList();
@@ -19,10 +21,11 @@ class GitRepo {
   // The default value for -p that Git uses.
   static const defaultStripComponents = 1;
 
+  final String _repo;
   final ToolRunner _git;
 
-  GitRepo(String location)
-      : _git = ToolRunner(executable: 'git', workingDirectory: location);
+  GitRepo(this._repo)
+      : _git = ToolRunner(executable: 'git', workingDirectory: _repo);
 
   Future<bool> isAncestor(
       {required String parent, required String commit}) async {
@@ -86,7 +89,8 @@ class GitRepo {
   Future<void> applyPatches(List<String> patches,
       {int additionalStripComponents = 0}) async {
     var stripComponents = defaultStripComponents + additionalStripComponents;
-    var result = await _git.run(['am', '-3', '-p$stripComponents']..addAll(patches));
+    var result =
+        await _git.run(['am', '-3', '-p$stripComponents']..addAll(patches));
     if (result.exitCode != 0) {
       log.fatal(
           "'git am' returned an error, probably because of patch conflicts.");
@@ -123,5 +127,15 @@ class GitRepo {
 
   Future<void> interactiveRebase({required String onto}) async {
     await _git.run(['rebase', '-i', onto], exitOnFailure: true);
+  }
+
+  Future<void> abortInProgressOperations() async {
+    var gitdir = p.join(_repo, '.git');
+    if (await File(p.join(gitdir, 'rebase-apply', 'applying')).exists()) {
+      await _git.run(['am', '--abort']);
+    } else if (await Directory(p.join(gitdir, 'rebase-apply')).exists() ||
+        await Directory(p.join(gitdir, 'rebase-merge')).exists()) {
+      await _git.run(['rebase', '--abort']);
+    }
   }
 }

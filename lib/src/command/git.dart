@@ -69,6 +69,9 @@ class DestructiveResetCommand extends CommandHandler<String>
         break;
     }
 
+    log.info('Aborting any in-progress operations...');
+    await component.repo.abortInProgressOperations();
+
     log.info('Resetting to $rev...');
     await component.repo.hardReset(to: rev);
 
