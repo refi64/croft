@@ -77,8 +77,6 @@ extension ArchUtils on Arch {
 }
 
 class ChromiumComponent extends Component {
-  static const llvmToolchainBin = 'third_party/llvm-build/Release+Asserts/bin';
-
   static const _versionFileKeys = ['MAJOR', 'MINOR', 'BUILD', 'PATCH'];
 
   @override
@@ -92,6 +90,9 @@ class ChromiumComponent extends Component {
   ChromiumComponent(this.path)
       : repo = GitRepo(path),
         _gclient = _Gclient(path);
+
+  static String getLLVMToolchainDirectory({String? id}) =>
+      'third_party/llvm-build/Release+Asserts${id != null ? '+$id' : ''}';
 
   @override
   Future<String> getUpstreamRevision() async {
@@ -121,6 +122,6 @@ class ChromiumComponent extends Component {
   String getSysrootRelativePath(Arch arch) => p.join(
         'build',
         'linux',
-        'debian_sid_${arch.sysrootArchName}-sysroot',
+        'debian_bullseye_${arch.sysrootArchName}-sysroot',
       );
 }

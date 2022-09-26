@@ -69,6 +69,9 @@ class Project {
 
   final String dockerCommand;
 
+  @JsonKey(name: 'use-custom-ffmpeg-toolchain')
+  final bool useCustomFFmpegToolchain;
+
   Project(
       {required this.manifestDir,
       required this.chromiumSourceRoot,
@@ -77,7 +80,8 @@ class Project {
       // 'Config.' prefix is a workaround for:
       // https://github.com/google/json_serializable.dart/issues/946
       this.buildDirName = Project.defaultBuildDirName,
-      this.dockerCommand = Project.defaultDockerCommand});
+      this.dockerCommand = Project.defaultDockerCommand,
+      this.useCustomFFmpegToolchain = false});
 
   factory Project.fromJson(Map json) => _$ProjectFromJson(json);
 

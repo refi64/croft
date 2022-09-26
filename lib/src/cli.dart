@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:croft/src/command/ffmpeg.dart';
 import 'package:logging/logging.dart';
 import 'package:plade/plade.dart';
 import 'package:plade/dispatch.dart';
@@ -32,6 +33,7 @@ class _CroftHandler extends AppHandler
     BuildShellCommand(),
     DestructiveResetCommand(),
     ExportPatchesCommand(),
+    BuildFFmpegToolchainCommand(),
     GenerateFFmpegConfigCommand(),
     GetUpstreamRevisionCommand(),
     RebaseOnUpstreamCommand(),

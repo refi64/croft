@@ -43,6 +43,8 @@ projects:
     chromium-source-root: ~/code/chromium/src
     # (optional, defaults to 'docker') The docker or podman command to run
     docker-command: docker
+    # (optional, defaults to 'false') Build a custom toolchain to configure FFmpeg
+    use-custom-ffmpeg-toolchain: false
 # (optional) Default project name in the projects map above
 default-project: chromium
 ```
@@ -110,3 +112,12 @@ build-release`, which will build the entire Flatpak manifest, from top to
 bottom. Due to the large size of the Chromium sources, this will also delete any
 previous Chromium build directories left over in your Flatpak cache before it
 starts.
+
+## Usage on arm64 hosts
+
+Chromium's default prebuilt toolchains, which required to generate the FFmpeg
+config, only run on x64, so a custom-built toolchain needs to be used. You can
+set `use-custom-ffmpeg-toolchain: true` in the project configuration and run
+`croft build-ffmpeg-toolchain` in order to build a separate copy of the Chromium
+build toolchain for use in generating the FFmpeg config. After that, `croft
+generate-ffmpeg-config` will automatically use the new toolchain.
