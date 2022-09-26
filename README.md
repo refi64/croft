@@ -41,10 +41,10 @@ projects:
     main-module: chromium
     # Directory containing the Chromium source tree
     chromium-source-root: ~/code/chromium/src
+    # (optional, defaults to 'docker') The docker or podman command to run
+    docker-command: docker
 # (optional) Default project name in the projects map above
 default-project: chromium
-# (optional, defaults to 'docker') The docker or podman command to run
-docker-command: docker
 ```
 
 ## Basic terms
