@@ -146,6 +146,7 @@ class FFmpegComponent extends Component {
       '--gcc-toolchain=/usr',
       '--host-cc=/usr/bin/clang-11',
       '--host-cxx=/usr/bin/clang++-11',
+      '--with-ml-inliner-model=',
       '--without-android',
       '--without-fuchsia',
       '--use-system-cmake',
